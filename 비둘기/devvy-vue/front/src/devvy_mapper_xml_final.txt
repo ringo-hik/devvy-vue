@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.devvy.mapper.DevvyMapper">
+
+    <!-- 카테고리 조회 (Text 코드 기반) -->
+    <select id="selectCategories" resultType="com.example.devvy.vo.DevvyVo">
+        SELECT 
+            JSON_UNQUOTE(JSON_EXTRACT(category_data.value, '$.categoryCode')) AS categoryCode,
+            JSON_UNQUOTE(JSON_EXTRACT(category_data.value, '$.categoryName')) AS categoryName,
+            JSON_UNQUOTE(JSON_EXTRACT(category_data.value, '$.description')) AS description,
+            JSON_UNQUOTE(JSON_EXTRACT(category_data.value, '$.icon')) AS icon,
+            JSON_UNQUOTE(JSON_EXTRACT(category_data.value, '$.sortOrder')) AS sortOrder
+        FROM devvy_data,
+        JSON_TABLE(
+            category_info->'$.categories',
+            '$[*]' COLUMNS (
+                value JSON PATH '$'
+            )
+        ) AS category_data
+        WHERE user_id = 'SYSTEM' 
+        AND data_type = 'SESSION'
+        AND user_query = 'Category initialization'
+        ORDER BY JSON_UNQUOTE(JSON_EXTRACT(category_data.value, '$.sortOrder')) ASC
+    </select>
+
+    <!-- 메시지 저장 (userQuery 필드) -->
+    <insert id="insertMessage" parameterType="com.example.devvy.vo.DevvyVo">
+        INSERT INTO devvy_data (
+            user_id, 
+            session_id, 
+            message_type, 
+            user_query,
+            category_code,
+            data_type,
+            created_at
+        ) VALUES (
+            #{userId}, 
+            #{sessionId}, 
+            #{messageType}, 
+            #{userQuery},
+            #{categoryCode},
+            'MESSAGE',
+            NOW()
+        )
+    </insert>
+
+    <!-- 세션별 메시지 조회 -->
+    <select id="selectSessionMessages" resultType="com.example.devvy.vo.DevvyVo">
+        SELECT 
+            message_type AS messageType,
+            user_query AS userQuery,
+            created_at AS createdAt
+        FROM devvy_data
+        WHERE session_id = #{sessionId} 
+        AND user_id = #{userId}
+        AND data_type = 'MESSAGE'
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- 세션 생성 -->
+    <insert id="insertSession" parameterType="com.example.devvy.vo.DevvyVo">
+        INSERT INTO devvy_data (
+            user_id,
+            session_id,
+            message_type,
+            user_query,
+            category_code,
+            category_info,
+            session_metadata,
+            data_type,
+            created_at
+        ) VALUES (
+            #{userId},
+            #{sessionId},
+            'SYSTEM',
+            'Session created',
+            #{categoryCode},
+            JSON_OBJECT(
+                'categoryCode', #{categoryCode},
+                'categoryName', #{categoryName}
+            ),
+            JSON_OBJECT(
+                'messageCount', 0,
+                'firstMessage', #{firstMessage}
+            ),
+            'SESSION',
+            NOW()
+        )
+    </insert>
+
+    <!-- 세션 메타데이터 업데이트 -->
+    <update id="updateSessionMetadata" parameterType="com.example.devvy.vo.DevvyVo">
+        UPDATE devvy_data 
+        SET 
+            session_metadata = JSON_SET(
+                COALESCE(session_metadata, JSON_OBJECT()),
+                '$.messageCount', 
+                COALESCE(JSON_EXTRACT(session_metadata, '$.messageCount'), 0) + 2
+            ),
+            updated_at = NOW()
+        WHERE session_id = #{sessionId}
+        AND data_type = 'SESSION'
+    </update>
+
+    <!-- 사용자 세션 히스토리 조회 -->
+    <select id="selectUserSessions" parameterType="string" resultType="com.example.devvy.vo.DevvyVo">
+        SELECT 
+            session_id AS sessionId,
+            category_code AS categoryCode,
+            JSON_UNQUOTE(JSON_EXTRACT(category_info, '$.categoryName')) AS categoryName,
+            JSON_UNQUOTE(JSON_EXTRACT(session_metadata, '$.messageCount')) AS messageCount,
+            created_at AS createdAt,
+            updated_at AS lastMessageAt,
+            JSON_UNQUOTE(JSON_EXTRACT(session_metadata, '$.firstMessage')) AS firstMessage
+        FROM devvy_data
+        WHERE user_id = #{userId}
+        AND data_type = 'SESSION'
+        ORDER BY updated_at DESC
+        LIMIT 10
+    </select>
+
+    <!-- 세션 존재 확인 -->
+    <select id="checkSessionExists" resultType="int">
+        SELECT COUNT(*)
+        FROM devvy_data
+        WHERE session_id = #{sessionId}
+        AND user_id = #{userId}
+        AND data_type = 'SESSION'
+        LIMIT 1
+    </select>
+
+    <!-- 피드백 저장 -->
+    <insert id="insertFeedback" parameterType="com.example.devvy.vo.DevvyVo">
+        INSERT INTO devvy_data (
+            user_id,
+            session_id,
+            message_type,
+            user_query,
+            feedback_data,
+            data_type,
+            created_at
+        ) VALUES (
+            #{userId},
+            #{sessionId},
+            'SYSTEM',
+            'User feedback',
+            JSON_OBJECT(
+                'rating', #{rating},
+                'comment', #{comment},
+                'feedbackCategory', #{feedbackCategory}
+            ),
+            'FEEDBACK',
+            #{createdAt}
+        )
+    </insert>
+
+    <!-- 사용자별 총 메시지 수 -->
+    <select id="getUserMessageCount" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM devvy_data
+        WHERE user_id = #{userId}
+        AND data_type = 'MESSAGE'
+    </select>
+
+    <!-- 사용자별 활성 세션 수 -->
+    <select id="getUserActiveSessionCount" parameterType="string" resultType="int">
+        SELECT COUNT(DISTINCT session_id)
+        FROM devvy_data
+        WHERE user_id = #{userId}
+        AND data_type = 'SESSION'
+    </select>
+
+    <!-- 오래된 데이터 정리 -->
+    <delete id="deleteOldData" parameterType="int">
+        DELETE FROM devvy_data
+        WHERE created_at &lt; DATE_SUB(NOW(), INTERVAL #{days} DAY)
+        AND user_id != 'SYSTEM'
+    </delete>
+
+    <!-- Dummy 시스템 상태 체크 -->
+    <select id="dummySystemHealthCheck" resultType="int">
+        SELECT 1 AS healthStatus
+    </select>
+
+</mapper>
