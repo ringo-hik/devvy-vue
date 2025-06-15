@@ -55,14 +55,14 @@ public class DevvyController {
 
     /**
      * 챗봇과 대화를 처리합니다.
-     * @param request 채팅 요청 데이터 (categoryId, message, sessionId 등)
+     * @param request 채팅 요청 데이터 (category, userQuery, sessionId 등)
      * @return AI 응답 데이터
      */
     @PostMapping("/chat")
     public ResponseEntity<DevvyVo> chat(@RequestBody DevvyVo request) {
-        String userId = getUserIdFromContext(); // 실제 환경에서는 인증 컨텍스트에서 사용자 ID를 가져와야 합니다.
+        String userId = getUserId(); // 실제 환경에서는 인증 컨텍스트에서 사용자 ID를 가져와야 합니다.
         request.setUserId(userId);
-        log.info("▶️ POST /chat - 채팅 요청 (User: {}, Category: {})", userId, request.getCategoryId());
+        log.info("▶️ POST /chat - 채팅 요청 (User: {}, Category: {})", userId, request.getCategoryName());
 
         try {
             DevvyVo aiResponse = devvyService.processDevvyChat(request);
@@ -80,7 +80,7 @@ public class DevvyController {
      */
     @GetMapping("/history")
     public ResponseEntity<DevvyVo> getChatHistory() {
-        String userId = getUserIdFromContext();
+        String userId = getUserId();
         log.info("▶️ GET /history - 히스토리 조회 요청 (User: {})", userId);
         try {
             List<DevvyVo> history = devvyService.getChatHistory(userId);
@@ -99,7 +99,7 @@ public class DevvyController {
      */
     @GetMapping("/sessions/{sessionId}/messages")
     public ResponseEntity<DevvyVo> getSessionMessages(@PathVariable String sessionId) {
-        String userId = getUserIdFromContext();
+        String userId = getUserId();
         log.info("▶️ GET /sessions/{}/messages - 세션 메시지 조회 요청 (User: {})", sessionId, userId);
         try {
             List<DevvyVo> messages = devvyService.getSessionMessages(sessionId, userId);
@@ -113,12 +113,12 @@ public class DevvyController {
 
     /**
      * 사용자의 피드백을 저장합니다.
-     * @param request 피드백 데이터 (rating, content, category 등)
+     * @param request 피드백 데이터 (rating, userQuery, category 등)
      * @return 처리 결과
      */
     @PostMapping("/feedback")
     public ResponseEntity<DevvyVo> saveFeedback(@RequestBody DevvyVo request) {
-        String userId = getUserIdFromContext();
+        String userId = getUserId();
         request.setUserId(userId);
         log.info("▶️ POST /feedback - 피드백 저장 요청 (User: {}, Rating: {})", userId, request.getRating());
 
@@ -136,7 +136,7 @@ public class DevvyController {
      * Spring Security 등 인증 컨텍스트에서 사용자 ID를 가져오는 메서드 (현재는 더미)
      * @return 사용자 ID
      */
-    private String getUserIdFromContext() {
+    private String getUserId() {
         // TODO: 실제 환경에서는 SecurityContextHolder.getContext().getAuthentication().getName(); 등으로 구현
         return "devvy-user-01";
     }

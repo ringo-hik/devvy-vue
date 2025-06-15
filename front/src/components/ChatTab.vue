@@ -129,14 +129,18 @@ export default {
           selectCategory: '어떤 도움이 필요하신가요?', loadingCategories: '카테고리 로딩 중...', pastConversation: '과거 대화',
           startNewChat: '새 대화 시작', change: '변경', welcomeTitle: '{category} 전문가, Devvy입니다!', copy: '복사',
           inputPlaceholder: '질문을 입력하세요...', quickQuestions: {
-              1: ['SWDP 메뉴 찾아줘', '프로젝트 등록 방법 알려줘'], 2: ['진행중인 프로젝트 목록 보여줘', '배포 상태 확인해줘'], 3: ['최근 장애 현황 알려줘', '로그인 문제 해결 방법은?']
+              MENU: ['SWDP 메뉴 찾아줘', '프로젝트 등록 방법 알려줘'],
+              PROJECT: ['진행중인 프로젝트 목록 보여줘', '배포 상태 확인해줘'],
+              VOC: ['최근 장애 현황 알려줘', '로그인 문제 해결 방법은?']
           }
         },
         en: {
           selectCategory: 'How can I help you?', loadingCategories: 'Loading categories...', pastConversation: 'Past Conversation',
           startNewChat: 'Start New Chat', change: 'Change', welcomeTitle: 'I am Devvy, an expert in {category}!', copy: 'Copy',
           inputPlaceholder: 'Enter your question...', quickQuestions: {
-              1: ['Find SWDP menu', 'How to register a project?'], 2: ['Show project list', 'Check deployment status'], 3: ['Recent issue status?', 'Login problem solutions?']
+              MENU: ['Find SWDP menu', 'How to register a project?'],
+              PROJECT: ['Show project list', 'Check deployment status'],
+              VOC: ['Recent issue status?', 'Login problem solutions?']
           }
         },
       };
@@ -147,7 +151,7 @@ export default {
     },
     quickQuestions() {
       if (!this.selectedCategory) return [];
-      return this.texts.quickQuestions[this.selectedCategory.categoryId] || [];
+      return this.texts.quickQuestions[this.selectedCategory.name] || [];
     }
   },
   // 원본 methods를 그대로 유지합니다.
@@ -196,8 +200,8 @@ export default {
       this.startLoadingMessages();
 
       this.$emit('message-sent', {
-        categoryId: this.selectedCategory.categoryId,
-        message: messageContent,
+        categoryName: this.selectedCategory.name,
+        userQuery: messageContent,
         sessionId: this.currentSessionId,
       });
     },
@@ -208,9 +212,16 @@ export default {
     addAiResponse(response) {
       this.stopLoadingMessages();
       this.$emit('processing-state-changed', false);
-      const content = response.message || (this.currentLanguage === 'ko' ? '오류가 발생했습니다.' : 'An error occurred.');
+      const content =
+        response.userQuery ||
+        response.content ||
+        response.message ||
+        (this.currentLanguage === 'ko'
+          ? '오류가 발생했습니다.'
+          : 'An error occurred.');
       this.messages.push({ type: 'ai', content });
-      if (response.sessionId) this.currentSessionId = response.sessionId;
+      const session = response.sessionId || response.sessionID;
+      if (session) this.currentSessionId = session;
       this.scrollToBottom();
     },
     loadHistorySession(historyItem) {
@@ -227,7 +238,7 @@ export default {
         if(res.success) {
           this.messages = res.data.map(m => ({
             type: m.messageType.toLowerCase(),
-            content: m.content
+            content: m.userQuery || m.content
           }));
         }
       }).finally(() => {

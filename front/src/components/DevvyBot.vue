@@ -195,7 +195,10 @@ export default {
       try {
         const response = await devvyService.getCategories();
         if (response.success) {
-          this.categories = response.data || [];
+          this.categories = (response.data || []).map(c => ({
+            ...c,
+            name: c.name || c.categoryName
+          }));
         } else {
           console.error('⚠️ Failed to load categories:', response.error);
         }
