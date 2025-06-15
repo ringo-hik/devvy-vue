@@ -94,7 +94,10 @@ $sp-padding: 16px;
     display: flex;
     align-items: center;
     gap: 12px;
-    .bot-avatar { font-size: 24px; }
+    .bot-avatar {
+      width: 24px;
+      height: 24px;
+    }
     .bot-name { font-weight: 600; font-size: 16px; }
     .status-indicator {
       display: flex;
@@ -210,14 +213,15 @@ $sp-padding: 16px;
   .category-selection {
     padding: $sp-padding * 1.5; text-align: center;
     .section-title { font-size: 18px; font-weight: 600; margin-bottom: 24px; color: $c-text-primary; }
-    .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .category-card {
+    .category-list { display: flex; flex-direction: column; gap: 10px; }
+    .category-item {
+      display: flex; align-items: center; justify-content: space-between;
       background: $c-white; border: 1px solid $c-border; border-radius: $sz-border-radius;
-      padding: 20px; cursor: pointer; transition: all 0.2s;
-      &:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-color: $c-accent; }
-      .category-icon { font-size: 28px; margin-bottom: 8px; }
-      .category-name { font-weight: 600; color: $c-text-primary; }
-      .category-desc { font-size: 12px; color: $c-text-secondary; }
+      padding: 10px 14px; cursor: pointer; transition: background 0.2s;
+      &:hover { background: $c-bg-alt; }
+      .category-icon { font-size: 20px; margin-right: 8px; }
+      .category-name { flex: 1; text-align: left; font-weight: 500; color: $c-text-primary; }
+      .category-arrow { color: $c-text-secondary; }
     }
   }
 
@@ -240,6 +244,8 @@ $sp-padding: 16px;
       display: flex;
       flex-direction: column;
       margin-bottom: 16px;
+      opacity: 0;
+      animation: fade-in 0.2s forwards;
       .message-bubble {
         padding: 10px 14px; border-radius: $sz-border-radius; max-width: 80%;
         line-height: 1.5; position: relative;
@@ -359,3 +365,7 @@ $sp-padding: 16px;
 
 // --- 10. 애니메이션 ---
 @keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

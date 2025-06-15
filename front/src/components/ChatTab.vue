@@ -11,13 +11,8 @@
       <!-- [수정] category-grid -> category-list 로 변경 -->
       <div v-else class="category-list">
         <div v-for="category in categories" :key="category.categoryId" class="category-item" @click="selectCategory(category)">
-           <div class="category-icon-wrapper">
-            <span class="category-icon">{{ category.icon || '✨' }}</span>
-          </div>
-          <div class="category-details">
-            <div class="category-name">{{ category.name }}</div>
-            <div class="category-desc">{{ category.description }}</div>
-          </div>
+          <span class="category-icon">{{ category.icon || '✨' }}</span>
+          <span class="category-name">{{ category.name }}</span>
           <div class="category-arrow">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </div>

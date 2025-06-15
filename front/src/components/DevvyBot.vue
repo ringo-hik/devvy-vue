@@ -8,18 +8,18 @@
       :class="{ 'has-notification': hasNotification }"
       :title="getText('openChatbot')"
     >
-      <div class="bot-icon">🤖</div>
+      <img :src="icons.bot" class="bot-icon" alt="Devvy" />
       <div v-if="hasNotification" class="notification-badge"></div>
     </div>
 
     <!-- 챗봇 창 -->
-    <transition name="devvy-window-fade">
+    <transition name="devvy-window-transition">
       <div v-if="isOpen" class="devvy-window">
         <!-- 헤더 -->
         <div class="devvy-header">
           <div class="header-content">
             <div class="bot-info">
-              <div class="bot-avatar">🤖</div>
+              <img :src="icons.bot" class="bot-avatar" alt="Devvy" />
               <div class="bot-details">
                 <span class="bot-name">Devvy Bot</span>
                 <div class="status-indicator" :class="{ 'offline': !isConnected }">
@@ -31,13 +31,13 @@
 
             <div class="header-actions">
               <button class="language-btn" @click="toggleLanguage" :title="getText('toggleLanguage')">
-                {{ currentLanguage === 'ko' ? 'EN' : 'KR' }}
+                <img :src="icons.language" width="16" height="16" alt="lang" />
               </button>
               <button class="minimize-btn" @click="minimizeBot" :title="getText('minimize')">
-                <svg width="16" height="16" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2"/></svg>
+                <img :src="icons.minimize" width="16" height="16" alt="minimize" />
               </button>
               <button class="close-btn" @click="closeBot" :title="getText('close')">
-                <svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
+                <img :src="icons.close" width="16" height="16" alt="close" />
               </button>
             </div>
           </div>
@@ -46,17 +46,17 @@
         <!-- 탭 메뉴 -->
         <div class="tab-menu">
           <button class="tab-button" :class="{ active: activeTab === 'chat' }" @click="switchTab('chat')" :disabled="isProcessing">
-            <svg width="16" height="16" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <img :src="icons.chat" width="16" height="16" alt="chat" />
             {{ getText('chat') }}
             <span v-if="isProcessing" class="processing-indicator"></span>
           </button>
           <button class="tab-button" :class="{ active: activeTab === 'history' }" @click="switchTab('history')" :disabled="isProcessing">
-             <svg width="16" height="16" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5m5-5v5l4 2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+             <img :src="icons.history" width="16" height="16" alt="history" />
             {{ getText('history') }}
             <span v-if="chatHistory.length > 0" class="history-count">{{ chatHistory.length }}</span>
           </button>
           <button class="tab-button" :class="{ active: activeTab === 'feedback' }" @click="switchTab('feedback')" :disabled="isProcessing">
-             <svg width="16" height="16" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-6 0v4m-2 4h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+             <img :src="icons.feedback" width="16" height="16" alt="feedback" />
             {{ getText('feedback') }}
           </button>
         </div>
@@ -100,6 +100,13 @@ import devvyService from '../services/devvyService';
 import ChatTab from './ChatTab.vue';
 import HistoryTab from './HistoryTab.vue';
 import FeedbackTab from './FeedbackTab.vue';
+import BotIcon from '../assets/icons/devvy-icon.svg';
+import ChatIcon from '../assets/icons/chat-icon.svg';
+import HistoryIcon from '../assets/icons/history-icon.svg';
+import FeedbackIcon from '../assets/icons/feedback-icon.svg';
+import MinimizeIcon from '../assets/icons/minimize-icon.svg';
+import CloseIcon from '../assets/icons/close-icon.svg';
+import LanguageIcon from '../assets/icons/language-icon.svg';
 
 export default {
   name: 'DevvyBot',
@@ -108,6 +115,15 @@ export default {
     return {
       isOpen: false,
       activeTab: 'chat',
+      icons: {
+        bot: BotIcon,
+        chat: ChatIcon,
+        history: HistoryIcon,
+        feedback: FeedbackIcon,
+        minimize: MinimizeIcon,
+        close: CloseIcon,
+        language: LanguageIcon,
+      },
       categories: [],
       loadingCategories: false,
       chatHistory: [],
