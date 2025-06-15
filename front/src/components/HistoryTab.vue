@@ -3,7 +3,7 @@
     <div class="history-header">
       <h3 class="section-title">{{ getText('title') }}</h3>
       <button class="refresh-btn" @click="$emit('refresh-history')" :disabled="loading" :title="getText('refresh')">
-        <svg width="16" height="16" viewBox="0 0 24 24"><path d="M23 4v6h-6m-1-6a9 9 0 1 0-9 9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <img :src="refreshIcon" alt="refresh" />
       </button>
     </div>
 
@@ -41,12 +41,14 @@
 </template>
 
 <script>
+import RefreshIcon from '../assets/icons/refresh.svg';
 export default {
   name: 'HistoryTab',
   props: ['history', 'loading', 'currentLanguage'],
   data() {
     return {
       error: null,
+      refreshIcon: RefreshIcon,
     };
   },
   computed: {
