@@ -7,7 +7,7 @@
 
     <!-- 카테고리 목록 조회 -->
     <select id="selectCategories" resultType="com.example.devvy.vo.DevvyVo">
-        SELECT 
+        SELECT
             category_id    AS categoryId,
             category_name  AS categoryName,
             description,
@@ -18,12 +18,21 @@
         ORDER BY sort_order ASC
     </select>
 
+    <!-- 누락된 카테고리별 컨텍스트 데이터 조회 -->
+    <select id="selectContextDataByCategory" parameterType="long" resultType="com.example.devvy.vo.DevvyVo">
+        SELECT context_data AS userQuery,
+               related_info
+        FROM devvy_context
+        WHERE category_id = #{categoryId}
+          AND is_active = 1
+    </select>
+
     <!-- 채팅 메시지 저장 -->
     <insert id="insertChatMessage" parameterType="com.example.devvy.vo.DevvyVo">
         INSERT INTO devvy_message (
-            session_id, user_id, category_id, message_type, content, timestamp
+            session_id, user_id, category_id, message_type, user_query, timestamp
         ) VALUES (
-            #{sessionId}, #{userId}, #{categoryId}, #{messageType}, #{content}, #{timestamp}
+            #{sessionId}, #{userId}, #{categoryId}, #{messageType}, #{userQuery}, #{timestamp}
         )
     </insert>
 
@@ -35,10 +44,10 @@
             s.message_count   AS messageCount,
             s.created_at      AS createdAt,
             s.last_message_at AS lastMessageAt,
-            (SELECT content 
+            (SELECT user_query
              FROM devvy_message m
              WHERE m.session_id = s.session_id AND m.message_type = 'USER'
-             ORDER BY m.timestamp ASC 
+             ORDER BY m.timestamp ASC
              LIMIT 1)         AS firstMessage
         FROM devvy_session s
         JOIN devvy_category c ON s.category_id = c.category_id
@@ -50,7 +59,7 @@
     <select id="selectSessionMessages" resultType="com.example.devvy.vo.DevvyVo">
         SELECT 
             message_type AS messageType,
-            content,
+            user_query   AS userQuery,
             timestamp
         FROM devvy_message
         WHERE session_id = #{sessionId} AND user_id = #{userId}

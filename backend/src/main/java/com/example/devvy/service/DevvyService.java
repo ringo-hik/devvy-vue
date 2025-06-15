@@ -22,17 +22,35 @@ public class DevvyService {
 
     private static final Logger log = LoggerFactory.getLogger(DevvyService.class);
 
-    @Autowired
-    private DevvyMapper devvyMapper;
+    // @Autowired
+    // private DevvyMapper devvyMapper;
 
     // @Autowired
     // private LlmService llmService; // 실제 LLM 연동 서비스 (현재는 주석 처리)
+
+    /** Dummy DB 호출을 대체하는 메서드 */
+    private void dummyDBCall(String op) {
+        log.debug("[DummyDB] {}", op);
+    }
+
+    /** 카테고리 VO 생성 */
+    private DevvyVo createCategory(String name, String desc) {
+        DevvyVo vo = new DevvyVo();
+        vo.setCategoryName(name);
+        vo.setDescription(desc);
+        return vo;
+    }
 
     /**
      * 활성화된 모든 카테고리 목록을 조회합니다.
      */
     public List<DevvyVo> getCategories() {
-        return devvyMapper.selectCategories();
+        dummyDBCall("selectCategories");
+        return List.of(
+                createCategory("MENU", "SWDP 메뉴"),
+                createCategory("PROJECT", "프로젝트"),
+                createCategory("VOC", "VOC")
+        );
     }
 
     /**
@@ -40,7 +58,7 @@ public class DevvyService {
      */
     @Transactional
     public DevvyVo processDevvyChat(DevvyVo request) {
-        log.info("Devvy 채팅 처리 시작 (User: {}, Category: {})", request.getUserId(), request.getCategoryId());
+        log.info("Devvy 채팅 처리 시작 (User: {}, Category: {})", request.getUserId(), request.getCategoryName());
 
         // 1. 세션 관리
         boolean isNewSession = (request.getSessionId() == null || request.getSessionId().isEmpty());
@@ -48,30 +66,31 @@ public class DevvyService {
         request.setSessionId(sessionId);
 
         // 2. 사용자 메시지 저장
-        saveMessage(request, "USER", request.getMessage());
+        saveMessage(request, "USER", request.getUserQuery());
 
         // 3. 컨텍스트 데이터 조회 (RAG를 위한 정보)
-        // String contextInfo = getContextData(request.getCategoryId());
+        // String contextInfo = getContextData(request.getCategoryName());
         
         // 4. LLM 호출하여 AI 응답 생성 (현재는 Dummy 응답)
-        // String prompt = buildPrompt(contextInfo, request.getMessage());
+        // String prompt = buildPrompt(contextInfo, request.getUserQuery());
         // String aiContent = llmService.generateResponse(prompt);
-        String aiContent = generateDummyAiResponse(request.getCategoryId()); // Dummy 로직으로 대체
+        String aiContent = generateDummyAiResponse(request.getCategoryName()); // Dummy 로직으로 대체
         
         // 5. AI 응답 메시지 저장
         saveMessage(request, "AI", aiContent);
 
         // 6. 세션 정보 업데이트 또는 생성
         if (isNewSession) {
-            devvyMapper.insertChatSession(request);
+            dummyDBCall("insertChatSession");
         } else {
-            devvyMapper.updateChatSession(request);
+            dummyDBCall("updateChatSession");
         }
         
         // 7. 프론트엔드로 전달할 응답 객체 생성
         DevvyVo response = new DevvyVo();
         response.setSessionId(sessionId);
-        response.setMessage(aiContent);
+        // 응답 메시지는 userQuery 필드에 저장한다.
+        response.setUserQuery(aiContent);
         response.setTimestamp(LocalDateTime.now());
         
         return response;
@@ -81,14 +100,16 @@ public class DevvyService {
      * 사용자의 전체 대화 히스토리 목록을 조회합니다.
      */
     public List<DevvyVo> getChatHistory(String userId) {
-        return devvyMapper.selectChatHistory(userId);
+        dummyDBCall("selectChatHistory");
+        return List.of();
     }
 
     /**
      * 특정 세션의 모든 메시지를 조회합니다.
      */
     public List<DevvyVo> getSessionMessages(String sessionId, String userId) {
-        return devvyMapper.selectSessionMessages(sessionId, userId);
+        dummyDBCall("selectSessionMessages");
+        return List.of();
     }
 
     /**
@@ -97,7 +118,7 @@ public class DevvyService {
     @Transactional
     public void saveFeedback(DevvyVo feedback) {
         feedback.setCreatedAt(LocalDateTime.now());
-        devvyMapper.insertFeedback(feedback);
+        dummyDBCall("insertFeedback");
     }
 
     /**
@@ -107,23 +128,29 @@ public class DevvyService {
         DevvyVo messageVo = new DevvyVo();
         messageVo.setSessionId(request.getSessionId());
         messageVo.setUserId(request.getUserId());
-        messageVo.setCategoryId(request.getCategoryId());
+        messageVo.setCategoryName(request.getCategoryName());
         messageVo.setMessageType(messageType);
-        messageVo.setContent(content);
+        messageVo.setUserQuery(content);
         messageVo.setTimestamp(LocalDateTime.now());
-        devvyMapper.insertChatMessage(messageVo);
+        dummyDBCall("insertChatMessage");
     }
 
     /**
      * 카테고리별 컨텍스트 데이터를 조회하고 문자열로 만듭니다. (Dummy)
      * 실제로는 이 부분에 DB 쿼리나 외부 API 호출 로직이 들어갑니다.
      */
-    private String getContextData(Long categoryId) {
-        // Dummy: 실제로는 devvyMapper.selectContextDataByCategory(categoryId) 등을 사용
-        if (categoryId == 2) { // '프로젝트' 카테고리
-            return "Context: DummyProjectInfo - 현재 활성 프로젝트는 15개, 주요 프로젝트는 'Phoenix'입니다.";
+    private String getContextData(String categoryName) {
+        dummyDBCall("selectContextData:" + categoryName);
+        switch (categoryName) {
+            case "PROJECT":
+                return DummyPROJECT();
+            case "VOC":
+                return DummyVOC();
+            case "MENU":
+                return DummyMENU();
+            default:
+                return "No specific context available.";
         }
-        return "No specific context available.";
     }
     
     /**
@@ -136,17 +163,30 @@ public class DevvyService {
     /**
      * LLM 연동 전, 테스트를 위한 더미 AI 응답을 생성합니다.
      */
-    private String generateDummyAiResponse(Long categoryId) {
-        switch (categoryId.intValue()) {
-            case 1: // SWDP Menu
-                return "🗺️ **SWDP 메뉴**에 대한 더미 답변입니다. `프로젝트 등록` 메뉴로 이동하여 새 프로젝트를 시작할 수 있습니다.";
-            case 2: // 프로젝트
-                return "📊 **DummyProjectInfo**에서 조회한 프로젝트 현황 더미 답변입니다. 현재 `payment-gateway` 서비스의 응답 시간이 지연되고 있어 확인이 필요합니다.";
-            case 3: // VOC
-                return "🔔 **DummyVOCData** 기준, VOC 관련 더미 답변입니다. 오늘 긴급으로 접수된 `로그인 실패` 관련 VOC는 현재 조치 중입니다.";
+    private String generateDummyAiResponse(String categoryName) {
+        switch (categoryName) {
+            case "MENU":
+                return DummyMENU();
+            case "PROJECT":
+                return DummyPROJECT();
+            case "VOC":
+                return DummyVOC();
             default:
                 return "해당 카테고리에 대한 정보를 찾을 수 없습니다.";
         }
+    }
+
+    // --- Dummy data providers ---
+    private String DummyMENU() {
+        return "🗺️ 메뉴 관련 더미 데이터";
+    }
+
+    private String DummyPROJECT() {
+        return "📊 프로젝트 더미 데이터";
+    }
+
+    private String DummyVOC() {
+        return "🔔 VOC 더미 데이터";
     }
 
     /**

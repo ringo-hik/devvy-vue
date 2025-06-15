@@ -32,7 +32,7 @@ public class DevvyVo {
     // --- 채팅 & 세션 ---
     private String sessionId;
     private String userId;
-    private String content;      // message 필드 대신 content로 통일
+    private String userQuery;    // 사용자 질문 또는 AI 응답
     private String messageType;  // "USER" or "AI"
     private LocalDateTime createdAt;
     private LocalDateTime lastMessageAt;
@@ -67,7 +67,11 @@ public class DevvyVo {
     // --- Getters and Setters ---
     public Boolean getSuccess() { return success; }
     public void setSuccess(Boolean success) { this.success = success; }
+    /**
+     * API 응답 메시지를 반환한다.
+     */
     public String getMessage() { return message; }
+
     public void setMessage(String message) { this.message = message; }
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
@@ -91,8 +95,8 @@ public class DevvyVo {
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public String getUserQuery() { return userQuery; }
+    public void setUserQuery(String userQuery) { this.userQuery = userQuery; }
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
     public LocalDateTime getCreatedAt() { return createdAt; }
