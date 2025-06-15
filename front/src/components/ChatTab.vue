@@ -11,15 +11,15 @@
       <!-- [수정] category-grid -> category-list 로 변경 -->
       <div v-else class="category-list">
         <div v-for="category in categories" :key="category.categoryId" class="category-item" @click="selectCategory(category)">
-           <div class="category-icon-wrapper">
-            <span class="category-icon">{{ category.icon || '✨' }}</span>
+          <div class="category-icon-wrapper">
+            <img class="category-icon" :src="getCategoryIcon(category.icon)" alt="icon" />
           </div>
           <div class="category-details">
             <div class="category-name">{{ category.name }}</div>
             <div class="category-desc">{{ category.description }}</div>
           </div>
           <div class="category-arrow">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <img :src="arrowIcon" alt="arrow" />
           </div>
         </div>
       </div>
@@ -54,7 +54,7 @@
               <div class="message-content" v-html="formatMessage(message.content)"></div>
               <!-- [복원] AI 메시지 복사 버튼 -->
               <button v-if="message.type === 'ai'" class="copy-btn" @click="copyMessage(message.content)" :title="getText('copy')">
-                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2m4-2h-4a2 2 0 0 0-2 2v2h8V4a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <img :src="copyIcon" alt="copy" />
               </button>
             </div>
         </div>
@@ -85,7 +85,7 @@
             maxlength="1000"
           ></textarea>
           <button class="send-button" @click="sendMessage" :disabled="!canSendMessage">
-            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
+            <img :src="sendIcon" alt="send" />
           </button>
         </div>
       </div>
@@ -97,6 +97,10 @@
 // 원본과 동일하게 devvyService와 marked를 import합니다.
 import devvyService, { getLoadingMessage } from '../services/devvyService';
 import { marked } from 'marked';
+import ArrowIcon from '../assets/icons/chevron-right.svg';
+import SendIcon from '../assets/icons/send-icon.svg';
+import CopyIcon from '../assets/icons/thumb-icon.svg';
+import CatIcon from '../assets/icons/cat-icon.svg';
 
 export default {
   name: 'ChatTab',
@@ -112,6 +116,9 @@ export default {
       isHistorySession: false,
       currentLoadingMessage: '',
       loadingInterval: null,
+      arrowIcon: ArrowIcon,
+      sendIcon: SendIcon,
+      copyIcon: CopyIcon,
     };
   },
   // 원본 computed 속성을 그대로 유지합니다.
@@ -146,6 +153,14 @@ export default {
   // 원본 methods를 그대로 유지합니다.
   methods: {
     getText(key) { return this.texts[key] || key; },
+    getCategoryIcon(name) {
+      if (!name) return CatIcon;
+      try {
+        return require(`../assets/icons/${name}`);
+      } catch (e) {
+        return CatIcon;
+      }
+    },
     formatMessage(content) {
       // AI 응답에 Markdown이 포함되어 있으면 HTML로 변환합니다.
       return marked(content || '');
