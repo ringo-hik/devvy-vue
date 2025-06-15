@@ -465,6 +465,24 @@ $shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
         line-height: 1.5; 
         position: relative;
         word-wrap: break-word;
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+        }
+
+        th, td {
+          border: 1px solid $c-border;
+          padding: 6px 8px;
+          font-size: 13px;
+          text-align: left;
+        }
+
+        th {
+          background: $c-bg-alt;
+          font-weight: 600;
+        }
         
         .copy-btn { 
           position: absolute; 
