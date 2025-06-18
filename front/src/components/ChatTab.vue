@@ -1,91 +1,103 @@
 <template>
   <div class="chat-tab">
-    <!-- 1. 카테고리 선택 화면 -->
-    <!-- `selectedCategory`가 null일 때, 가로 리스트 형태로 카테고리를 보여줍니다. (요청사항 반영) -->
-    <div v-if="!selectedCategory" class="category-selection">
-      <h3 class="section-title">{{ getText('selectCategory') }}</h3>
-      <div v-if="loadingCategories" class="loading-state">
-        <div class="loading-spinner"></div>
+    <!-- 카테고리 선택 화면 -->
+    <div v-if="!selectedCategory" class="category-select">
+      <h3>{{ getText('selectCategory') }}</h3>
+      <div v-if="loadingCategories" class="loading">
+        <div class="spinner"></div>
         <p>{{ getText('loadingCategories') }}</p>
       </div>
-      <!-- [수정] category-grid -> category-list 로 변경 -->
-      <div v-else class="category-list">
-        <div v-for="category in categories" :key="category.categoryId" class="category-item" @click="selectCategory(category)">
-          <div class="category-icon-wrapper">
-            <img class="category-icon" :src="getCategoryIcon(category.icon)" alt="icon" />
+      <div v-else class="categories">
+        <div v-for="category in categories" :key="category.categoryId" 
+             @click="selectCategory(category)" class="category">
+          <!-- 개선된 아이콘 처리: iconPath 우선 사용, 없으면 categoryCode 기반 기본 아이콘 사용 -->
+          <unicon :name="getCategoryIconName(category)" fill="#2C5AA0" :width="24" :height="24"></unicon>
+          <div class="info">
+            <div class="name">{{ currentLanguage === 'ko' ? category.description : category.descriptionEn }}</div>
+            <div class="desc">{{ currentLanguage === 'ko' ? category.description : category.descriptionEn }}</div>
           </div>
-          <div class="category-details">
-            <div class="category-name">{{ category.name }}</div>
-            <div class="category-desc">{{ category.description }}</div>
-          </div>
-          <div class="category-arrow">
-            <img :src="arrowIcon" alt="arrow" />
-          </div>
+          <unicon name="angle-right" fill="#9AA0A6" :width="16" :height="16"></unicon>
         </div>
       </div>
     </div>
 
-    <!-- 2. 채팅 화면 -->
-    <!-- 카테고리가 선택되면 이 부분이 표시됩니다. (원본 구조 유지) -->
-    <div v-else class="chat-section">
-      <div class="selected-category-header">
+    <!-- 채팅 화면 -->
+    <div v-else class="chat-area">
+      <!-- 헤더 -->
+      <div class="chat-header">
         <div class="category-info">
-          <div class="category-badge">{{ selectedCategory.icon || '✨' }} {{ selectedCategory.name }}</div>
-          <!-- [복원] 히스토리 대화 보기 기능 -->
-          <div v-if="isHistorySession" class="history-session-info">📖 {{ getText('pastConversation') }}</div>
+          <div class="badge">
+            <!-- 선택된 카테고리의 아이콘도 동일한 로직 적용 -->
+            <unicon :name="getCategoryIconName(selectedCategory)" fill="#2C5AA0" :width="14" :height="14"></unicon>
+            {{ currentLanguage === 'ko' ? selectedCategory.description : selectedCategory.descriptionEn }}
+          </div>
         </div>
-        <div class="category-actions">
-           <!-- [복원] 히스토리 대화 시 '새 대화' 버튼 -->
-           <button v-if="isHistorySession" class="action-btn new-chat" @click="startNewChat" :title="getText('startNewChat')">+</button>
-           <button class="action-btn change-category" @click="resetCategory" :disabled="isProcessing">{{ getText('change') }}</button>
+        <div class="controls">
+          <button @click="resetCategory" :disabled="isProcessing" class="btn-text">
+            <unicon name="redo" fill="#9AA0A6" :width="12" :height="12"></unicon>
+            {{ getText('change') }}
+          </button>
         </div>
       </div>
 
-      <div class="messages-container" ref="messagesContainer">
-        <!-- [복원] 웰컴 메시지 -->
-        <div v-if="messages.length === 0 && !isProcessing" class="welcome-message">
-            <div class="welcome-icon">{{ selectedCategory.icon || '✨' }}</div>
-            <h4>{{ getText('welcomeTitle').replace('{category}', selectedCategory.name) }}</h4>
+      <!-- 메시지 영역 -->
+      <div class="messages" ref="messagesContainer" @scroll="handleScroll">
+        <div v-if="messages.length === 0 && !isProcessing && !loadingHistory" class="welcome">
+          <unicon name="sparkle" fill="#2C5AA0" :width="36" :height="36"></unicon>
+          <h4>{{ getText('welcomeTitle').replace('{category}', currentLanguage === 'ko' ? selectedCategory.description : selectedCategory.descriptionEn) }}</h4>
         </div>
 
-        <div v-for="(message, index) in messages" :key="index" class="message" :class="[message.type === 'user' ? 'user' : 'ai']">
-            <div class="message-bubble">
-              <!-- [복원] Markdown 렌더링을 위해 v-html 사용 -->
-              <div class="message-content" v-html="formatMessage(message.content)"></div>
-              <!-- [복원] AI 메시지 복사 버튼 -->
-              <button v-if="message.type === 'ai'" class="copy-btn" @click="copyMessage(message.content)" :title="getText('copy')">
-                <img :src="copyIcon" alt="copy" />
+        <!-- 히스토리 로딩 -->
+        <div v-if="loadingHistory" class="loading-history">
+          <div class="spinner"></div>
+          <span>{{ getText('loadingHistory') }}</span>
+        </div>
+
+        <!-- 메시지들 -->
+        <div v-for="message in messages" 
+             :key="message.id"
+             :class="['message', message.type]"
+             ref="messageElements">
+          <div class="bubble" :class="{ 'loading': message.isLoading }">
+            <!-- 로딩 중인 메시지 -->
+            <template v-if="message.isLoading">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <div class="text">{{ currentLoadingMessage }}</div>
+            </template>
+            
+            <!-- 일반 메시지 -->
+            <template v-else>
+              <div class="content" v-html="formatMessageContent(message.content)"></div>
+              
+              <button v-if="message.type === 'ai'" 
+                      @click="copyMessage(message)" 
+                      class="copy">
+                <unicon name="copy" fill="#9AA0A6" :width="12" :height="12"></unicon>
               </button>
-            </div>
-        </div>
-
-        <!-- [복원] 다이나믹 로딩 메시지 -->
-        <div v-if="isProcessing" class="message ai">
-            <div class="message-bubble loading">
-              <div class="loading-dots"><span></span><span></span><span></span></div>
-              <div class="loading-text">{{ currentLoadingMessage }}</div>
-            </div>
+            </template>
+          </div>
         </div>
       </div>
 
       <!-- 입력 영역 -->
-      <div class="input-section">
-         <!-- [복원] 빠른 질문 기능 -->
-         <div v-if="!isHistorySession" class="quick-questions">
-            <button v-for="q in quickQuestions" :key="q" @click="sendQuickQuestion(q)">{{ q }}</button>
+      <div class="input-area">
+        <div v-if="quickQuestions.length > 0 && !isProcessing" class="quick-questions">
+          <button v-for="q in quickQuestions" :key="q" @click="sendQuickQuestion(q)" class="quick-btn">
+            <unicon name="bolt" fill="#2C5AA0" :width="12" :height="12"></unicon>
+            {{ q }}
+          </button>
         </div>
-        <div class="input-container">
-          <textarea
-            v-model="currentMessage"
-            ref="messageInput"
-            :placeholder="getText('inputPlaceholder')"
-            @keydown.enter.exact.prevent="sendMessage"
-            @input="adjustTextareaHeight"
-            :disabled="isProcessing"
-            maxlength="1000"
-          ></textarea>
-          <button class="send-button" @click="sendMessage" :disabled="!canSendMessage">
-            <img :src="sendIcon" alt="send" />
+        <div class="input-box">
+          <textarea v-model="currentMessage" 
+                    ref="messageInput" 
+                    :placeholder="getText('inputPlaceholder')"
+                    @keydown.enter.exact.prevent="sendMessage" 
+                    @input="adjustTextareaHeight"
+                    :disabled="isProcessing" 
+                    maxlength="1000"></textarea>
+          <button @click="sendMessage" :disabled="!canSendMessage" class="send">
+            <div v-if="isProcessing" class="loading-spinner"></div>
+            <unicon v-else name="message" fill="#FFFFFF" :width="18" :height="18"></unicon>
           </button>
         </div>
       </div>
@@ -94,184 +106,497 @@
 </template>
 
 <script>
-// 원본과 동일하게 devvyService와 marked를 import합니다.
-import devvyService, { getLoadingMessage } from '../services/devvyService';
-import { marked } from 'marked';
-import ArrowIcon from '../assets/icons/chevron-right.svg';
-import SendIcon from '../assets/icons/send-icon.svg';
-import CopyIcon from '../assets/icons/thumb-icon.svg';
-import CatIcon from '../assets/icons/cat-icon.svg';
+import floatChatService from '@/services/floatChatService';
 
 export default {
   name: 'ChatTab',
-  // 원본 props를 그대로 유지합니다.
-  props: ['categories', 'loadingCategories', 'isProcessing', 'currentLanguage'],
-  // 원본 data를 그대로 유지합니다. (히스토리, 로딩 메시지 관련 상태 포함)
+  props: {
+    categories: {
+      type: Array,
+      default: () => []
+    },
+    loadingCategories: {
+      type: Boolean,
+      default: false
+    },
+    isProcessing: {
+      type: Boolean,
+      default: false
+    },
+    currentLanguage: {
+      type: String,
+      default: 'ko'
+    },
+    windowSize: {
+      type: Object,
+      default: () => ({ width: 455, height: 676 })
+    }
+  },
   data() {
     return {
       selectedCategory: null,
       currentMessage: '',
       messages: [],
-      currentSessionId: null,
-      isHistorySession: false,
+      loadingHistory: false,
       currentLoadingMessage: '',
       loadingInterval: null,
-      arrowIcon: ArrowIcon,
-      sendIcon: SendIcon,
-      copyIcon: CopyIcon,
+      loadingMessageId: null,
+      floatChatService: floatChatService
     };
   },
-  // 원본 computed 속성을 그대로 유지합니다.
   computed: {
     texts() {
-      const allTexts = {
+      return {
         ko: {
-          selectCategory: '어떤 도움이 필요하신가요?', loadingCategories: '카테고리 로딩 중...', pastConversation: '과거 대화',
-          startNewChat: '새 대화 시작', change: '변경', welcomeTitle: '{category} 전문가, Devvy입니다!', copy: '복사',
-          inputPlaceholder: '질문을 입력하세요...', quickQuestions: {
-              1: ['SWDP 메뉴 찾아줘', '프로젝트 등록 방법 알려줘'], 2: ['진행중인 프로젝트 목록 보여줘', '배포 상태 확인해줘'], 3: ['최근 장애 현황 알려줘', '로그인 문제 해결 방법은?']
-          }
+          selectCategory: '어떤 도움이 필요하신가요?',
+          loadingCategories: '카테고리 로딩 중...',
+          loadingHistory: '대화 기록 불러오는 중...',
+          change: '변경',
+          welcomeTitle: '{category} 전문가, SWP Float Chat입니다!',
+          inputPlaceholder: '질문을 입력하세요...'
         },
         en: {
-          selectCategory: 'How can I help you?', loadingCategories: 'Loading categories...', pastConversation: 'Past Conversation',
-          startNewChat: 'Start New Chat', change: 'Change', welcomeTitle: 'I am Devvy, an expert in {category}!', copy: 'Copy',
-          inputPlaceholder: 'Enter your question...', quickQuestions: {
-              1: ['Find SWDP menu', 'How to register a project?'], 2: ['Show project list', 'Check deployment status'], 3: ['Recent issue status?', 'Login problem solutions?']
-          }
-        },
-      };
-      return allTexts[this.currentLanguage];
+          selectCategory: 'How can I help you?',
+          loadingCategories: 'Loading categories...',
+          loadingHistory: 'Loading conversation history...',
+          change: 'Change',
+          welcomeTitle: 'I am SWP Float Chat, an expert in {category}!',
+          inputPlaceholder: 'Enter your question...'
+        }
+      }[this.currentLanguage];
     },
+    
     canSendMessage() {
       return this.currentMessage.trim().length > 0 && !this.isProcessing;
     },
+    
     quickQuestions() {
       if (!this.selectedCategory) return [];
-      return this.texts.quickQuestions[this.selectedCategory.categoryId] || [];
+      return floatChatService.getQuickQuestions(this.selectedCategory.categoryCode, this.currentLanguage);
     }
   },
-  // 원본 methods를 그대로 유지합니다.
   methods: {
-    getText(key) { return this.texts[key] || key; },
-    getCategoryIcon(name) {
-      if (!name) return CatIcon;
-      try {
-        return require(`../assets/icons/${name}`);
-      } catch (e) {
-        return CatIcon;
-      }
+    getText(key) { 
+      return this.texts[key] || key; 
     },
-    formatMessage(content) {
-      // AI 응답에 Markdown이 포함되어 있으면 HTML로 변환합니다.
-      return marked(content || '');
+    
+    // ===== 아이콘 처리 메서드 (개선됨) =====
+    
+    /**
+     * 카테고리의 아이콘명을 반환합니다.
+     * iconPath가 있으면 우선 사용, 없으면 categoryCode 기반 기본 아이콘 사용
+     */
+    getCategoryIconName(category) {
+      if (!category) return 'comment';
+      
+      // floatChatService의 개선된 getCategoryIcon 메서드 사용
+      return this.floatChatService.getCategoryIcon(category.categoryCode, category.iconPath);
     },
+    
+    // ===== 카테고리 관리 =====
+    
     selectCategory(category) {
       this.selectedCategory = category;
       this.messages = [];
-      this.currentSessionId = null;
-      this.isHistorySession = false;
-      this.$nextTick(() => this.$refs.messageInput.focus());
+      this.loadingHistory = true;
+      
+      // 대화 히스토리 로드 (비동기)
+      floatChatService.getConversations(category.categoryCode)
+        .then(response => {
+          if (response.success && response.data) {
+            // 대화 데이터를 채팅 메시지 형태로 변환
+            this.messages = floatChatService.convertConversationsToMessages(response.data);
+          }
+        })
+        .catch(error => {
+          console.error('대화 기록 로드 오류:', error);
+        })
+        .finally(() => {
+          this.loadingHistory = false;
+          this.$nextTick(() => {
+            this.scrollToBottom();
+            this.$refs.messageInput?.focus();
+          });
+        });
     },
+    
     resetCategory() {
       this.selectedCategory = null;
-      this.$emit('processing-state-changed', false);
+      this.messages = [];
+      this.currentMessage = '';
+      this.stopLoadingMessages();
     },
+    
     resetToInitialState() {
       this.selectedCategory = null;
       this.messages = [];
       this.currentMessage = '';
-      this.currentSessionId = null;
-      this.isHistorySession = false;
       this.stopLoadingMessages();
     },
+    
+    // ===== 메시지 송수신 =====
+    
     sendMessage() {
       if (!this.canSendMessage) return;
-      const messageContent = this.currentMessage;
-      this.messages.push({ type: 'user', content: messageContent });
+      
+      const messageContent = this.currentMessage.trim();
+      const timestamp = Date.now();
+      
+      // 사용자 메시지를 즉시 화면에 표시
+      const userMessage = {
+        id: `user-${timestamp}`,
+        type: 'user', 
+        content: messageContent,
+        timestamp,
+        isLoading: false
+      };
+      
+      this.messages.push(userMessage);
+      
+      // 로딩 메시지 추가
+      this.loadingMessageId = `ai-${timestamp}`;
+      const loadingMessage = {
+        id: this.loadingMessageId,
+        type: 'ai',
+        content: '',
+        timestamp: timestamp + 1,
+        isLoading: true
+      };
+      
+      this.messages.push(loadingMessage);
+      
+      // 입력 필드 초기화 및 UI 업데이트
       this.currentMessage = '';
       this.adjustTextareaHeight();
       this.scrollToBottom();
-
-      this.$emit('processing-state-changed', true);
       this.startLoadingMessages();
-
+      
+      // ⭐ 메시지 전송 이벤트 발생 (부모 컴포넌트에서 실제 API 호출)
       this.$emit('message-sent', {
-        categoryId: this.selectedCategory.categoryId,
-        message: messageContent,
-        sessionId: this.currentSessionId,
+        categoryCode: this.selectedCategory.categoryCode,
+        userQuestion: messageContent
       });
     },
+    
     sendQuickQuestion(question) {
       this.currentMessage = question;
       this.sendMessage();
     },
+    
+    // ===== AI 응답 처리 =====
+    
     addAiResponse(response) {
+      // 로딩 메시지 제거
+      if (this.loadingMessageId) {
+        const loadingIndex = this.messages.findIndex(msg => msg.id === this.loadingMessageId);
+        if (loadingIndex !== -1) {
+          this.messages.splice(loadingIndex, 1);
+        }
+        this.loadingMessageId = null;
+      }
+      
       this.stopLoadingMessages();
-      this.$emit('processing-state-changed', false);
-      const content = response.message || (this.currentLanguage === 'ko' ? '오류가 발생했습니다.' : 'An error occurred.');
-      this.messages.push({ type: 'ai', content });
-      if (response.sessionId) this.currentSessionId = response.sessionId;
+      
+      // AI 응답 메시지 추가
+      if (response.success) {
+        const aiMessage = {
+          id: `ai-${Date.now()}`,
+          type: 'ai',
+          content: response.aiResponse || response.message || '응답을 받았습니다.',
+          timestamp: Date.now(),
+          isLoading: false,
+          conversationId: response.conversationId
+        };
+        
+        this.messages.push(aiMessage);
+      } else {
+        // 에러 메시지 추가
+        const errorMessage = {
+          id: `error-${Date.now()}`,
+          type: 'ai',
+          content: response.message || '응답 생성 중 오류가 발생했습니다.',
+          timestamp: Date.now(),
+          isLoading: false,
+          isError: true
+        };
+        
+        this.messages.push(errorMessage);
+      }
+      
       this.scrollToBottom();
     },
-    loadHistorySession(historyItem) {
-      const category = this.categories.find(c => c.name === historyItem.categoryName);
-      if (!category) return;
-
-      this.selectedCategory = category;
-      this.currentSessionId = historyItem.sessionId;
-      this.isHistorySession = true;
-      this.messages = [];
-      this.$emit('processing-state-changed', true);
-
-      devvyService.getSessionMessages(historyItem.sessionId).then(res => {
-        if(res.success) {
-          this.messages = res.data.map(m => ({
-            type: m.messageType.toLowerCase(),
-            content: m.content
-          }));
-        }
-      }).finally(() => {
-        this.$emit('processing-state-changed', false);
-        this.scrollToBottom();
-      });
+    
+    // ===== 메시지 포맷팅 =====
+    
+    formatMessageContent(content) {
+      if (!content) return '';
+      
+      // 마크다운 테이블이 포함된 경우 HTML로 변환
+      return floatChatService.convertMarkdownTableToHtml(content);
     },
-    startNewChat() {
-      this.isHistorySession = false;
-      this.messages = [];
-      this.currentSessionId = null;
-    },
+    
+    // ===== 로딩 메시지 관리 =====
+    
     startLoadingMessages() {
-      this.currentLoadingMessage = getLoadingMessage(this.currentLanguage);
+      const loadingMessages = {
+        ko: [
+          '분석 중입니다',
+          '정보를 수집하고 있습니다',
+          '응답을 준비하고 있습니다'
+        ],
+        en: [
+          'Analyzing...',
+          'Gathering information...',
+          'Preparing response...'
+        ]
+      };
+      
+      const messages = loadingMessages[this.currentLanguage];
+      let index = 0;
+      
+      this.currentLoadingMessage = messages[index];
+      
       this.loadingInterval = setInterval(() => {
-        this.currentLoadingMessage = getLoadingMessage(this.currentLanguage);
+        index = (index + 1) % messages.length;
+        this.currentLoadingMessage = messages[index];
       }, 2000);
     },
+    
     stopLoadingMessages() {
-      clearInterval(this.loadingInterval);
-      this.loadingInterval = null;
-    },
-    copyMessage(content) {
-      navigator.clipboard.writeText(content).then(() => {
-        // 복사 성공 시 간단한 UI 피드백을 줄 수 있습니다.
-      });
-    },
-    adjustTextareaHeight() {
-      const textarea = this.$refs.messageInput;
-      if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
+      if (this.loadingInterval) {
+        clearInterval(this.loadingInterval);
+        this.loadingInterval = null;
       }
     },
+    
+    // ===== 유틸리티 메서드 =====
+    
+    copyMessage(message) {
+      const textToCopy = floatChatService.convertMessageToText(message);
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => {
+            console.log('메시지가 복사되었습니다.');
+          })
+          .catch(err => {
+            console.error('복사 실패:', err);
+            this.fallbackCopyTextToClipboard(textToCopy);
+          });
+      } else {
+        this.fallbackCopyTextToClipboard(textToCopy);
+      }
+    },
+    
+    fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          console.log('메시지가 복사되었습니다.');
+        } else {
+          console.error('복사 실패');
+        }
+      } catch (err) {
+        console.error('복사 실패:', err);
+      }
+      
+      document.body.removeChild(textArea);
+    },
+    
+    adjustTextareaHeight() {
+      this.$nextTick(() => {
+        const textarea = this.$refs.messageInput;
+        if (textarea) {
+          textarea.style.height = 'auto';
+          const newHeight = Math.min(textarea.scrollHeight, 100);
+          textarea.style.height = `${newHeight}px`;
+        }
+      });
+    },
+    
     scrollToBottom() {
       this.$nextTick(() => {
         const container = this.$refs.messagesContainer;
-        if (container) container.scrollTop = container.scrollHeight;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
       });
+    },
+    
+    handleScroll() {
+      // 필요시 스크롤 이벤트 처리 (예: 이전 메시지 로드)
     }
   },
-  // 원본 lifecycle hook을 그대로 유지합니다.
+  
   beforeDestroy() {
     this.stopLoadingMessages();
   },
+  
+  watch: {
+    currentLanguage() {
+      this.$nextTick(() => {
+        this.adjustTextareaHeight();
+      });
+    },
+    
+    isProcessing(newVal) {
+      if (!newVal) {
+        // 처리 완료 시 로딩 메시지 정리
+        this.stopLoadingMessages();
+      }
+    }
+  }
 };
 </script>
+
+<style scoped>
+/* 로딩 히스토리 스타일 */
+.loading-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.loading-history .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #eee;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 로딩 스피너 (전송 버튼용) */
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* 마크다운 테이블 스타일 */
+.content {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.content ::v-deep .text-content {
+  margin-bottom: 12px;
+}
+
+.content ::v-deep .table-container {
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.content ::v-deep .markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.content ::v-deep .markdown-table thead th {
+  background: var(--primary);
+  color: white;
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.content ::v-deep .markdown-table tbody td {
+  padding: 8px;
+  border-bottom: 1px solid #e9ecef;
+  color: var(--text-dark);
+  vertical-align: top;
+}
+
+.content ::v-deep .markdown-table tbody tr:hover {
+  background-color: #f1f3f4;
+}
+
+.content ::v-deep .markdown-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* AI 메시지 스타일 조정 */
+.message.ai .bubble {
+  max-width: 95%;
+}
+
+/* 로딩 상태 메시지 스타일 */
+.message .bubble.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.message .bubble.loading .dots {
+  display: flex;
+  gap: 4px;
+}
+
+.message .bubble.loading .dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: bounce 1.4s ease-in-out infinite both;
+}
+
+.message .bubble.loading .dots span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.message .bubble.loading .dots span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.message .bubble.loading .text {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* 반응형 테이블 */
+@media (max-width: 480px) {
+  .content ::v-deep .markdown-table {
+    font-size: 10px;
+  }
+  
+  .content ::v-deep .markdown-table thead th,
+  .content ::v-deep .markdown-table tbody td {
+    padding: 6px 4px;
+  }
+}
+
+/* 애니메이션 */
+@keyframes spin { 
+  100% { transform: rotate(360deg); } 
+}
+
+@keyframes bounce { 
+  0%, 80%, 100% { transform: translateY(0); } 
+  40% { transform: translateY(-4px); } 
+}
+</style>

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.temporary22.devportal.mapper.aiagent.FloatChatMapper">
+
+    <!-- === 카테고리 관리 === -->
+    
+    <!-- 활성화된 카테고리 목록 조회 (시스템 프롬프트 포함) -->
+    <select id="selectCategories" resultType="com.temporary22.aiagent.entity.FloatChatVo">
+        SELECT 
+            CATEGORY_ID as categoryId,
+            CATEGORY_CODE as categoryCode,
+            DESCRIPTION as description,
+            DESCRIPTION_EN as descriptionEn,
+            ICON_PATH as iconPath,
+            SYSTEM_PROMPT as systemPrompt,
+            ACTIVE_YN as activeYn
+        FROM 
+            SWP_FLOAT_CHAT_INFO
+        WHERE 
+            ACTIVE_YN = 'Y'
+        ORDER BY 
+            CATEGORY_ID ASC
+    </select>
+
+    <!-- 특정 카테고리 정보 조회 (시스템 프롬프트 포함) -->
+    <select id="selectCategoryByCode" parameterType="string" resultType="com.temporary22.aiagent.entity.FloatChatVo">
+        SELECT 
+            CATEGORY_ID as categoryId,
+            CATEGORY_CODE as categoryCode,
+            DESCRIPTION as description,
+            DESCRIPTION_EN as descriptionEn,
+            ICON_PATH as iconPath,
+            SYSTEM_PROMPT as systemPrompt,
+            ACTIVE_YN as activeYn
+        FROM 
+            SWP_FLOAT_CHAT_INFO
+        WHERE 
+            CATEGORY_CODE = #{categoryCode}
+            AND ACTIVE_YN = 'Y'
+    </select>
+
+    <!-- 카테고리 존재 여부 확인 -->
+    <select id="checkCategoryExists" parameterType="string" resultType="int">
+        SELECT 
+            COUNT(*)
+        FROM 
+            SWP_FLOAT_CHAT_INFO
+        WHERE 
+            CATEGORY_CODE = #{categoryCode}
+            AND ACTIVE_YN = 'Y'
+    </select>
+
+    <!-- === 프롬프트 관리 === -->
+    
+    <!-- 카테고리의 시스템 프롬프트 업데이트 -->
+    <update id="updateSystemPrompt">
+        UPDATE SWP_FLOAT_CHAT_INFO 
+        SET 
+            SYSTEM_PROMPT = #{systemPrompt},
+            MODIFIED_DATE = NOW(),
+            MODIFIED_BY = #{userId}
+        WHERE 
+            CATEGORY_CODE = #{categoryCode}
+            AND ACTIVE_YN = 'Y'
+    </update>
+
+    <!-- 특정 카테고리의 시스템 프롬프트만 조회 -->
+    <select id="selectSystemPrompt" parameterType="string" resultType="string">
+        SELECT 
+            SYSTEM_PROMPT
+        FROM 
+            SWP_FLOAT_CHAT_INFO
+        WHERE 
+            CATEGORY_CODE = #{categoryCode}
+            AND ACTIVE_YN = 'Y'
+    </select>
+
+    <!-- === 대화 관리 === -->
+    
+    <!-- 질문-답변 대화 저장 -->
+    <insert id="insertConversation" parameterType="com.temporary22.aiagent.entity.FloatChatVo"
+            useGeneratedKeys="true" keyProperty="conversationId" keyColumn="CONVERSATION_ID">
+        INSERT INTO SWP_FLOAT_CHAT_CONVERSATION (
+            CATEGORY_CODE,
+            USER_ID,
+            USER_QUESTION,
+            AI_RESPONSE,
+            CREATED_DATE
+        ) VALUES (
+            #{categoryCode},
+            #{userId},
+            #{userQuestion},
+            #{aiResponse},
+            NOW()
+        )
+    </insert>
+
+    <!-- 사용자별 카테고리별 최신 대화 목록 조회 -->
+    <select id="selectRecentConversations" resultType="com.temporary22.aiagent.entity.FloatChatVo">
+        SELECT 
+            CONVERSATION_ID as conversationId,
+            CATEGORY_CODE as categoryCode,
+            USER_ID as userId,
+            USER_QUESTION as userQuestion,
+            AI_RESPONSE as aiResponse,
+            CREATED_DATE as createdDate
+        FROM 
+            SWP_FLOAT_CHAT_CONVERSATION
+        WHERE 
+            USER_ID = #{userId}
+            AND CATEGORY_CODE = #{categoryCode}
+        ORDER BY 
+            CREATED_DATE DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 사용자별 카테고리별 전체 대화 수 조회 -->
+    <select id="getTotalConversationCount" resultType="int">
+        SELECT 
+            COUNT(*)
+        FROM 
+            SWP_FLOAT_CHAT_CONVERSATION
+        WHERE 
+            USER_ID = #{userId}
+            AND CATEGORY_CODE = #{categoryCode}
+    </select>
+
+    <!-- === 피드백 관리 === -->
+    
+    <!-- 피드백 저장 -->
+    <insert id="insertFeedback" parameterType="com.temporary22.aiagent.entity.FloatChatVo">
+        INSERT INTO SWP_FLOAT_CHAT_FEEDBACK (
+            USER_ID,
+            RATING,
+            FEEDBACK_CATEGORY,
+            COMMENT,
+            CREATED_DATE
+        ) VALUES (
+            #{userId},
+            #{rating},
+            #{feedbackCategory},
+            #{comment},
+            NOW()
+        )
+    </insert>
+
+    <!-- === 시스템 관리 === -->
+    
+    <!-- 시스템 상태 확인 -->
+    <select id="healthCheck" resultType="int">
+        SELECT 1 AS healthStatus
+    </select>
+
+    <!-- 오래된 대화 데이터 정리 -->
+    <delete id="deleteOldConversations" parameterType="int">
+        DELETE FROM 
+            SWP_FLOAT_CHAT_CONVERSATION
+        WHERE 
+            CREATED_DATE &lt; DATE_SUB(NOW(), INTERVAL #{days} DAY)
+    </delete>
+
+</mapper>
