@@ -4,69 +4,112 @@
       <div class="logo">🏢</div>
       <h1>Main Service</h1>
       <p class="description">
-        메인 서비스가 독립적으로 동작합니다. FloatChat은 통합 컴포넌트로 실행됩니다.
+        메인 서비스가 독립적으로 동작합니다. FloatChat은 별도 Vue 앱으로 실행됩니다.
       </p>
       <div class="status">
         <button @click="toggleFloatChat" class="toggle-btn">
           FloatChat {{ floatChatVisible ? '숨기기' : '보이기' }}
         </button>
+        <div class="info">
+          <p>FloatChat 상태: {{ floatChatStatus }}</p>
+          <p>등록된 메서드: {{ registeredMethods.join(', ') }}</p>
+        </div>
       </div>
     </div>
 
-    <FloatChatMain 
-      v-if="floatChatVisible" 
-      :user-info="userInfo"
-      @request-user-info="handleRequestUserInfo"
-      @show-notification="handleShowNotification"
-      @navigate-to="handleNavigateTo"
-      @update-state="handleUpdateState"
-      @call-api="handleCallAPI"
-      @toggle-visibility="handleToggleVisibility" />
+    <div id="float-chat-container" v-show="floatChatVisible"></div>
   </div>
 </template>
 
 <script>
-import FloatChatMain from './components/FloatChatMain.vue';
-
 export default {
   name: 'App',
-  components: {
-    FloatChatMain
-  },
   data() {
     return {
       floatChatVisible: true,
+      floatChatManager: null,
       userInfo: {
         id: 'user123',
         name: '김개발',
-        role: 'developer'
+        role: 'developer',
+        token: 'sample-jwt-token'
       }
-    };
+    }
+  },
+  computed: {
+    floatChatStatus() {
+      if (!this.floatChatManager) return 'Not Loaded'
+      const status = this.floatChatManager.getStatus()
+      return status.isInitialized ? 'Initialized' : 'Loading'
+    },
+    
+    registeredMethods() {
+      if (!this.floatChatManager) return []
+      const status = this.floatChatManager.getStatus()
+      return status.registeredMethods
+    }
   },
   methods: {
-    toggleFloatChat() {
-      this.floatChatVisible = !this.floatChatVisible;
-    },
-
-    handleRequestUserInfo() {
-      return this.userInfo;
-    },
-
-    handleShowNotification(message) {
-      alert(`📢 ${message}`);
-    },
-
-    handleNavigateTo(page) {
-      window.location.hash = `#/${page}`;
-    },
-
-    handleUpdateState(key, value) {
-      if (key in this.$data) {
-        this[key] = value;
+    async initFloatChat() {
+      try {
+        const { default: FloatChatManager } = await import('./floatChatApp.js')
+        this.floatChatManager = FloatChatManager
+        
+        this.registerMainAppMethods()
+        
+        this.floatChatManager.init({
+          containerId: 'float-chat-container',
+          language: 'ko'
+        })
+        
+        this.floatChatManager.updateUserInfo(this.userInfo)
+        
+        console.log('FloatChat initialization completed')
+        
+      } catch (error) {
+        console.error('FloatChat initialization failed:', error)
       }
     },
-
-    handleCallAPI(endpoint, data) {
+    
+    registerMainAppMethods() {
+      this.floatChatManager.registerMainMethod('getUserInfo', () => {
+        console.log('Main App: getUserInfo called')
+        return this.userInfo
+      })
+      
+      this.floatChatManager.registerMainMethod('showNotification', (message) => {
+        console.log('Main App: showNotification called with:', message)
+        this.showNotification(message)
+      })
+      
+      this.floatChatManager.registerMainMethod('navigateTo', (page) => {
+        console.log('Main App: navigateTo called with:', page)
+        this.navigateToPage(page)
+      })
+      
+      this.floatChatManager.registerMainMethod('callAPI', (endpoint, data) => {
+        console.log('Main App: callAPI called with:', endpoint, data)
+        return this.callMainAPI(endpoint, data)
+      })
+    },
+    
+    toggleFloatChat() {
+      this.floatChatVisible = !this.floatChatVisible
+      if (this.floatChatManager) {
+        this.floatChatManager.setVisibility(this.floatChatVisible)
+      }
+    },
+    
+    showNotification(message) {
+      alert(`📢 ${message}`)
+    },
+    
+    navigateToPage(page) {
+      console.log(`Navigating to: ${page}`)
+      window.location.hash = `#/${page}`
+    },
+    
+    callMainAPI(endpoint, data) {
       return fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -74,11 +117,24 @@ export default {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
-      }).then(res => res.json());
+      }).then(res => res.json())
     },
-
-    handleToggleVisibility(visible) {
-      this.floatChatVisible = visible;
+    
+    updateUserInfo(newUserInfo) {
+      this.userInfo = { ...this.userInfo, ...newUserInfo }
+      if (this.floatChatManager) {
+        this.floatChatManager.updateUserInfo(this.userInfo)
+      }
+    }
+  },
+  
+  async mounted() {
+    await this.initFloatChat()
+  },
+  
+  beforeDestroy() {
+    if (this.floatChatManager) {
+      this.floatChatManager.destroy()
     }
   }
 }
@@ -128,9 +184,24 @@ export default {
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.3s;
+    margin-bottom: 20px;
 
     &:hover {
       background-color: #1C3959;
+    }
+  }
+  
+  .info {
+    text-align: left;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    
+    p {
+      margin: 5px 0;
+      font-size: 12px;
+      color: #6c757d;
     }
   }
 }

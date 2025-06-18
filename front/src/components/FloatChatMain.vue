@@ -95,6 +95,10 @@ export default {
     userInfo: {
       type: Object,
       default: () => ({})
+    },
+    language: {
+      type: String,
+      default: 'ko'
     }
   },
   data() {
@@ -104,7 +108,7 @@ export default {
       categories: [],
       loadingCategories: false,
       isConnected: true,
-      currentLanguage: this.getInitialLanguage(),
+      currentLanguage: this.language,
       categorySessionMap: {},
       
       // 브라우저 스타일 창 상태 관리
@@ -144,13 +148,6 @@ export default {
       return this.texts[key] || key; 
     },
     
-    getInitialLanguage() {
-      try {
-        return localStorage.getItem('float-chat-lang') || 'ko';
-      } catch (error) {
-        return 'ko';
-      }
-    },
     
     toggleChat() {
       this.isOpen = !this.isOpen;
@@ -166,7 +163,7 @@ export default {
       this.windowState = 'normal';
       this.cancelAllPendingRequests();
       if (this.$refs.chatTab) this.$refs.chatTab.resetToInitialState();
-      this.$emit('toggle-visibility', false);
+      this.$emit('visibility-changed', false);
     },
     
     
@@ -190,6 +187,7 @@ export default {
       } catch (error) {
         console.error('언어 설정 저장 오류:', error);
       }
+      this.$emit('language-changed', this.currentLanguage);
     },
     
     initializeChatData() {
