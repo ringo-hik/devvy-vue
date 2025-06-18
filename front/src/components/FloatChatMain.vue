@@ -91,16 +91,6 @@ import FeedbackTab from './FeedbackTab.vue';
 export default {
   name: 'FloatChatMain',
   components: { ChatTab, FeedbackTab },
-  props: {
-    userInfo: {
-      type: Object,
-      default: () => ({})
-    },
-    language: {
-      type: String,
-      default: 'ko'
-    }
-  },
   data() {
     return {
       isOpen: false,
@@ -108,7 +98,7 @@ export default {
       categories: [],
       loadingCategories: false,
       isConnected: true,
-      currentLanguage: this.language,
+      currentLanguage: 'ko',
       categorySessionMap: {},
       
       // 브라우저 스타일 창 상태 관리
@@ -163,7 +153,6 @@ export default {
       this.windowState = 'normal';
       this.cancelAllPendingRequests();
       if (this.$refs.chatTab) this.$refs.chatTab.resetToInitialState();
-      this.$emit('visibility-changed', false);
     },
     
     
@@ -187,7 +176,6 @@ export default {
       } catch (error) {
         console.error('언어 설정 저장 오류:', error);
       }
-      this.$emit('language-changed', this.currentLanguage);
     },
     
     initializeChatData() {
@@ -339,31 +327,11 @@ export default {
       }
     },
 
-    requestMainNotification(message, type = 'info') {
-      this.$emit('show-notification', message, type);
-    },
-
-    requestMainNavigation(page) {
-      this.$emit('navigate-to', page);
-    },
-
-    callMainAppAPI(endpoint, data) {
-      return this.$emit('call-api', endpoint, data);
-    },
-
-    requestUserInfo() {
-      return this.$emit('request-user-info');
-    },
-
-    applyTheme(theme) {
-      document.documentElement.setAttribute('data-float-chat-theme', theme);
-    }
   },
   
   mounted() {
     this.loadStoredSessions();
     this.startHealthCheck();
-    this.currentUser = this.userInfo;
   },
   
   beforeDestroy() {
