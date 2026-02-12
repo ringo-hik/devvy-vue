@@ -30,14 +30,14 @@
             </div>
 
             <div class="header-actions">
-              <button class="language-btn" @click="toggleLanguage" :title="getText('toggleLanguage')">
-                {{ currentLanguage === 'ko' ? 'EN' : 'KR' }}
+              <button class="language-btn action-btn" @click="toggleLanguage" :title="getText('toggleLanguage')">
+                <object type="image/svg+xml" :data="require('@/assets/icons/language-icon.svg')" class="icon"></object>
               </button>
-              <button class="minimize-btn" @click="minimizeBot" :title="getText('minimize')">
-                <svg width="16" height="16" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2"/></svg>
+              <button class="minimize-btn action-btn" @click="minimizeBot" :title="getText('minimize')">
+                <object type="image/svg+xml" :data="require('@/assets/icons/minimize-icon.svg')" class="icon"></object>
               </button>
-              <button class="close-btn" @click="closeBot" :title="getText('close')">
-                <svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" stroke-width="2"/></svg>
+              <button class="close-btn action-btn" @click="closeBot" :title="getText('close')">
+                <object type="image/svg+xml" :data="require('@/assets/icons/close-icon.svg')" class="icon"></object>
               </button>
             </div>
           </div>
@@ -46,17 +46,17 @@
         <!-- 탭 메뉴 -->
         <div class="tab-menu">
           <button class="tab-button" :class="{ active: activeTab === 'chat' }" @click="switchTab('chat')" :disabled="isProcessing">
-            <svg width="16" height="16" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <object type="image/svg+xml" :data="require('@/assets/icons/chat-icon.svg')" class="icon"></object>
             {{ getText('chat') }}
             <span v-if="isProcessing" class="processing-indicator"></span>
           </button>
           <button class="tab-button" :class="{ active: activeTab === 'history' }" @click="switchTab('history')" :disabled="isProcessing">
-             <svg width="16" height="16" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5m5-5v5l4 2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <object type="image/svg+xml" :data="require('@/assets/icons/history-icon.svg')" class="icon"></object>
             {{ getText('history') }}
             <span v-if="chatHistory.length > 0" class="history-count">{{ chatHistory.length }}</span>
           </button>
           <button class="tab-button" :class="{ active: activeTab === 'feedback' }" @click="switchTab('feedback')" :disabled="isProcessing">
-             <svg width="16" height="16" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-6 0v4m-2 4h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <object type="image/svg+xml" :data="require('@/assets/icons/feedback-icon.svg')" class="icon"></object>
             {{ getText('feedback') }}
           </button>
         </div>
@@ -96,7 +96,7 @@
 </template>
 
 <script>
-import devvyService from '../services/devvyService';
+import devvyService from '../services/devvyService.js-real';
 import ChatTab from './ChatTab.vue';
 import HistoryTab from './HistoryTab.vue';
 import FeedbackTab from './FeedbackTab.vue';

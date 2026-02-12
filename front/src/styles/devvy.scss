@@ -50,8 +50,8 @@ $sp-padding: 16px;
     height: 32px;
   }
   &:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 8px 25px rgba($c-primary, 0.4);
+    transform: translateY(-2px) scale(1.02); // More subtle hover
+    box-shadow: 0 6px 20px rgba($c-primary, 0.35); // Adjusted shadow
   }
 }
 
@@ -70,7 +70,7 @@ $sp-padding: 16px;
 
 .devvy-window-transition-enter-active,
 .devvy-window-transition-leave-active {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out;
+  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.2s ease-out; // Smoother bezier curve
 }
 .devvy-window-transition-enter,
 .devvy-window-transition-leave-to {
@@ -127,9 +127,11 @@ $sp-padding: 16px;
       cursor: pointer;
       transition: background 0.2s;
       &:hover { background: rgba($c-white, 0.2); }
-      img {
+      .icon { // Changed from img to .icon for object tag
         width: 18px;
         height: 18px;
+        opacity: 0.8; // Muted icon color on primary background
+        pointer-events: none; // Prevent object from capturing mouse events
       }
     }
   }
@@ -157,12 +159,13 @@ $sp-padding: 16px;
     gap: 8px;
     transition: color 0.2s;
 
-    img {
+    .icon { // Changed from img to .icon for object tag
       width: 18px;
       height: 18px;
       opacity: 0.7;
       filter: grayscale(80%);
       transition: all 0.2s;
+      pointer-events: none; // Prevent object from capturing mouse events
     }
 
     &:after {
@@ -179,7 +182,7 @@ $sp-padding: 16px;
 
     &.active {
       color: $c-accent;
-      img {
+      .icon { // Changed from img to .icon for object tag
         opacity: 1;
         filter: grayscale(0%);
       }
@@ -210,12 +213,34 @@ $sp-padding: 16px;
   .category-selection {
     padding: $sp-padding * 1.5; text-align: center;
     .section-title { font-size: 18px; font-weight: 600; margin-bottom: 24px; color: $c-text-primary; }
-    .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .category-grid {
+      display: flex;
+      overflow-x: auto;
+      gap: 12px;
+      padding-bottom: 10px; // For scrollbar visibility
+      .category-card { // Individual cards might need width adjustments
+        flex-shrink: 0; // Prevent shrinking
+        width: 150px; // Example fixed width, adjust as needed
+      }
+    }
     .category-card {
       background: $c-white; border: 1px solid $c-border; border-radius: $sz-border-radius;
       padding: 20px; cursor: pointer; transition: all 0.2s;
-      &:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-color: $c-accent; }
-      .category-icon { font-size: 28px; margin-bottom: 8px; }
+      // Subtler hover effect for category cards
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.04);
+        border-color: $c-primary-light;
+      }
+      .category-icon { // Styles for the <object> tag used for category icons
+        width: 28px; // Was font-size
+        height: 28px;
+        margin-bottom: 8px;
+        // color: $c-text-secondary; // May not apply to object, use SVG properties or filters
+        opacity: 0.7; // Example, adjust as needed
+        filter: grayscale(50%); // Example, adjust as needed
+        pointer-events: none;
+      }
       .category-name { font-weight: 600; color: $c-text-primary; }
       .category-desc { font-size: 12px; color: $c-text-secondary; }
     }
@@ -272,7 +297,19 @@ $sp-padding: 16px;
         background: $c-accent; color: $c-white; display: flex;
         align-items: center; justify-content: center; cursor: pointer;
         transition: background 0.2s;
-        &:disabled { background: $c-border; cursor: not-allowed; }
+        .icon { // Styles for the send icon
+            width: 18px;
+            height: 18px;
+            filter: brightness(0) invert(1); // Make it white
+            pointer-events: none;
+        }
+        &:disabled {
+          background: $c-border;
+          cursor: not-allowed;
+          .icon {
+            filter: brightness(0) invert(0.6); // Darker icon when disabled
+          }
+        }
       }
     }
   }
@@ -359,3 +396,19 @@ $sp-padding: 16px;
 
 // --- 10. 애니메이션 ---
 @keyframes spin { 100% { transform: rotate(360deg); } }
+
+// --- 11. Scrollbar Styling (Minimal) ---
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba($c-text-placeholder, 0.3);
+  border-radius: 4px;
+  &:hover {
+    background: rgba($c-text-placeholder, 0.5);
+  }
+}

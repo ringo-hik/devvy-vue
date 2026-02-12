@@ -12,7 +12,7 @@
       <div v-else class="category-list">
         <div v-for="category in categories" :key="category.categoryId" class="category-item" @click="selectCategory(category)">
            <div class="category-icon-wrapper">
-            <span class="category-icon">{{ category.icon || '✨' }}</span>
+            <object type="image/svg+xml" :data="require('@/assets/icons/cat-icon.svg')" class="category-icon"></object>
           </div>
           <div class="category-details">
             <div class="category-name">{{ category.name }}</div>
@@ -85,7 +85,7 @@
             maxlength="1000"
           ></textarea>
           <button class="send-button" @click="sendMessage" :disabled="!canSendMessage">
-            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z" fill="currentColor"/></svg>
+            <object type="image/svg+xml" :data="require('@/assets/icons/send-icon.svg')" class="icon"></object>
           </button>
         </div>
       </div>
